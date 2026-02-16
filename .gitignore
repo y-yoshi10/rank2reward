@@ -1,3 +1,6 @@
+/datasets/
+/outouts/
+
 .r3m
 wandb
 policy_learning/experiments

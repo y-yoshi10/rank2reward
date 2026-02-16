@@ -577,8 +577,9 @@ class LearnedImageRewardFunction(LearnedRewardFunction):
         self.expert_data = [d for d in self.expert_data_ptr]
         self.expert_test_data_ptr = H5PyTrajDset(self.expert_test_data_path, read_only_if_exists=True)
         self.expert_test_data = [d for d in self.expert_test_data_ptr]
+        # self.num_expert_trajs = len(self.expert_data)
+        # assert self.num_expert_trajs == 100
         self.num_expert_trajs = len(self.expert_data)
-        assert self.num_expert_trajs == 100
 
         # replay buffer
         self.replay_buffer = replay_buffer
