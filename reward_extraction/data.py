@@ -40,6 +40,62 @@ class H5PyTrajDset(Dataset):
     def __len__(self):
         return self.length # this is the number of trajectories stored
 
+    # def __getitem__(self, idx):
+    #     if idx < 0 or idx >= self.length:
+    #         raise IndexError
+
+    #     return (
+    #         self.f[str(idx)]["s_t"][:],
+    #         self.f[str(idx)]["a_t"][:],
+    #         self.f[str(idx)]["r_t"][:],
+    #         self.f[str(idx)]["g_t"][:],
+    #         self.f[str(idx)]["env_full_s_t"][:],
+    #     )
+
+    # def add_traj(self, states, actions, rewards, goals, env_full_states):
+    #     # env_full_states would be the metaworld state space compatible with
+    #     # the expert policies or the full franka kitchen state space
+
+    #     # supports adding batch size number of trajs at a time!
+    #     # i.e., 0th index should be 1 for single trajectories
+
+    #     if not self.created and self.read_only_if_exists:
+    #         assert False
+
+    #     # assumes input is in batches
+    #     # (bs, traj_length, state_size)
+    #     # (bs, traj_length, action_size)
+    #     # (bs, rand_vec_size)
+    #     if self.state_shape is None:
+    #         self.state_shape = states.shape[1:]
+    #         self.action_shape = actions.shape[1:]
+    #         self.reward_shape = rewards.shape[1:]
+    #         self.goal_shape = goals.shape[1:]
+    #         self.env_full_state_shape = env_full_states.shape[1:]
+
+    #     bs = states.shape[0]
+    #     for b_idx in range(bs):
+    #         add_idx = self.length + b_idx
+    #         grp = self.f.create_group(f'{add_idx}')
+    #         if len(self.state_shape) == 4: # images
+    #             grp.create_dataset("s_t", shape=self.state_shape, dtype=np.uint8)
+    #         else:
+    #             grp.create_dataset("s_t", shape=self.state_shape, dtype=np.float32)
+    #         grp.create_dataset("a_t", shape=self.action_shape, dtype=np.float32)
+    #         grp.create_dataset("r_t", shape=self.reward_shape, dtype=np.float32)
+    #         grp.create_dataset("g_t", shape=self.goal_shape, dtype=np.float32)
+    #         grp.create_dataset("env_full_s_t", shape=self.env_full_state_shape, dtype=np.float32)
+
+    #         grp["s_t"][:] = states[b_idx]
+    #         grp["a_t"][:] = actions[b_idx]
+    #         grp["r_t"][:] = rewards[b_idx]
+    #         grp["g_t"][:] = goals[b_idx]
+    #         grp["env_full_s_t"][:] = env_full_states[b_idx]
+
+    #     self.length += bs
+    #     self.f.flush()
+
+
     def __getitem__(self, idx):
         if idx < 0 or idx >= self.length:
             raise IndexError
@@ -59,38 +115,24 @@ class H5PyTrajDset(Dataset):
         # supports adding batch size number of trajs at a time!
         # i.e., 0th index should be 1 for single trajectories
 
-        if not self.created and self.read_only_if_exists:
-            assert False
-
         # assumes input is in batches
         # (bs, traj_length, state_size)
-        # (bs, traj_length, action_size)
-        # (bs, rand_vec_size)
-        if self.state_shape is None:
-            self.state_shape = states.shape[1:]
-            self.action_shape = actions.shape[1:]
-            self.reward_shape = rewards.shape[1:]
-            self.goal_shape = goals.shape[1:]
-            self.env_full_state_shape = env_full_states.shape[1:]
+        
+        batch_size = states.shape[0]
+        
+        for i in range(batch_size):
+            idx = self.length + i
+            group_name = str(idx)
+            
+            if group_name in self.f:
+                del self.f[group_name]
+            
+            grp = self.f.create_group(group_name)
 
-        bs = states.shape[0]
-        for b_idx in range(bs):
-            add_idx = self.length + b_idx
-            grp = self.f.create_group(f'{add_idx}')
-            if len(self.state_shape) == 4: # images
-                grp.create_dataset("s_t", shape=self.state_shape, dtype=np.uint8)
-            else:
-                grp.create_dataset("s_t", shape=self.state_shape, dtype=np.float32)
-            grp.create_dataset("a_t", shape=self.action_shape, dtype=np.float32)
-            grp.create_dataset("r_t", shape=self.reward_shape, dtype=np.float32)
-            grp.create_dataset("g_t", shape=self.goal_shape, dtype=np.float32)
-            grp.create_dataset("env_full_s_t", shape=self.env_full_state_shape, dtype=np.float32)
-
-            grp["s_t"][:] = states[b_idx]
-            grp["a_t"][:] = actions[b_idx]
-            grp["r_t"][:] = rewards[b_idx]
-            grp["g_t"][:] = goals[b_idx]
-            grp["env_full_s_t"][:] = env_full_states[b_idx]
-
-        self.length += bs
-        self.f.flush()
+            grp.create_dataset("s_t", data=states[i])
+            grp.create_dataset("a_t", data=actions[i])
+            grp.create_dataset("r_t", data=rewards[i])
+            grp.create_dataset("g_t", data=goals[i])
+            grp.create_dataset("env_full_s_t", data=env_full_states[i])
+            
+        self.length += batch_size
